@@ -73,7 +73,7 @@ graph TD
 
 ### 1. Backend Setup
 ```bash
-git clone https://github.com/<your-username>/hydroguard-ai.git
+git clone https://github.com/upamada-ekanayake/hydroguard-ai.git
 cd hydroguard-ai/backend
 
 python -m venv venv
