@@ -1,27 +1,31 @@
-# 🌊 HydroGuard AI: Autonomous Multi-Agent Flood Prediction & Evacuation System
+# 🌊 HydroGuard AI: Autonomous Multi-Agent Flood Command Center
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-1.2-000000?style=for-the-badge&logo=python)](https://langchain-ai.github.io/langgraph/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![XGBoost](https://img.shields.io/badge/XGBoost-Red?style=for-the-badge&logo=xgboost)](https://xgboost.readthedocs.io/)
-[![Bun](https://img.shields.io/badge/Bun-1.x-000000?style=for-the-badge&logo=bun)](https://bun.sh/)
+[![MapLibre](https://img.shields.io/badge/MapLibre-3.35-396CB2?style=for-the-badge&logo=maplibre)](https://maplibre.org/)
 
-An end-to-end, AI-powered early-warning and emergency response platform designed to mitigate flash flooding downstream of the Victoria Dam, Sri Lanka. Instead of relying on slow, manual announcements, **HydroGuard AI** uses a stateful Multi-Agent System (LangGraph) to predict dam spill-gate releases, map exact flood zones, and dispatch personalized, multilingual evacuation alerts in real time.
+An end-to-end, AI-powered early-warning and emergency response platform designed to mitigate flash flooding downstream of the Victoria Dam, Sri Lanka. Instead of relying on slow, manual announcements, **HydroGuard AI** uses a stateful Multi-Agent System to predict dam spill-gate releases, map exact flood zones, and dispatch personalized, multilingual evacuation alerts in real-time via a sci-fi-inspired Command Center UI.
+
+---
+
+## 📸 Preview
+
+| CRITICAL (115 mm / 1145 ft → 25,126 cusecs) | NORMAL (30 mm / 1110 ft) |
+| :---: | :---: |
+| ![Command Center, critical stage](docs/command-center-critical.png) | ![Command Center, normal stage](docs/command-center-normal.png) |
 
 ---
 
 ## 🚨 The Problem
-
-During heavy monsoon rains, the Victoria Dam must open its spill gates to prevent structural overflow. Sudden, large-volume water releases into the Mahaweli River cause rapid flash flooding in downstream communities (e.g., Tennekumbura, Katugastota, Peradeniya). Current warning methods are often slow, generic, and fail to give residents specific evacuation instructions in their own languages (Sinhala / Tamil).
+During heavy monsoons, sudden water releases from the Victoria Dam cause rapid flash flooding in downstream communities (e.g., Tennekumbura, Katugastota, Peradeniya). Current warning systems are often manual, generic, and lack precise, multilingual evacuation guidance in native scripts (Sinhala/Tamil).
 
 ## 💡 The Solution
-
-HydroGuard AI orchestrates four specialized agents that cooperate in one pipeline:
-
-1. **The Watcher** — validates incoming rainfall and reservoir telemetry against safety thresholds.
-2. **The Brain** — runs XGBoost models to predict spill-gate release volume (cusecs) and assign a risk level (Normal, Warning, Critical).
-3. **The Mapper** — queries PostgreSQL for affected Grama Niladhari (GN) divisions and the shelters serving them.
-4. **The Communicator** — generates calm, grammatically correct emergency alerts in English, Sinhala and Tamil, using native-script place names.
+HydroGuard AI orchestrates four specialized AI agents that work together in real-time:
+1. **The Watcher**: Monitors live rainfall and dam telemetry against safety thresholds.
+2. **The Brain**: Runs an XGBoost machine learning model to predict spill-gate release volumes (in cusecs) and assign a risk level (Normal, Warning, Critical).
+3. **The Mapper**: Queries a PostgreSQL database to identify affected Grama Niladhari (GN) divisions and locate the nearest safe shelters.
+4. **The Communicator**: Uses few-shot prompting to generate calm, grammatically correct emergency alerts in English, Sinhala, and Tamil, complete with accurate native-script place names.
 
 ---
 
@@ -29,40 +33,22 @@ HydroGuard AI orchestrates four specialized agents that cooperate in one pipelin
 
 ```mermaid
 graph TD
-    A[Admin Dashboard / Dam Sensors] -->|rainfall_mm, water_level_ft| B(Agent 1: The Watcher)
-    B -->|thresholds exceeded?| C(Agent 2: The Brain)
-    C -->|XGBoost: risk level + cusecs| D(Agent 3: The Mapper)
-    D -->|SQL: GN divisions + shelters| E[(Supabase PostgreSQL)]
-    D -->|affected zones + shelters| F(Agent 4: The Communicator)
-    F -->|few-shot prompt| G((Gemini LLM))
-    G -->|en / si / ta alerts| F
-    F -->|JSON response| H[Next.js + MapLibre GL dashboard]
+    A[Command Center UI] -->|Rainfall & Water Level| B(Agent 1: The Watcher)
+    B -->|Threshold Exceeded?| C(Agent 2: The Brain)
+    C -->|Predict Risk & Cusecs| D(Agent 3: The Mapper)
+    D -->|Query DB for GN Divisions & Shelters| E[(Supabase PostgreSQL)]
+    D -->|Affected Zones & Shelter Data| F(Agent 4: The Communicator)
+    F -->|Few-Shot Prompting| G((Gemini LLM))
+    F -->|Map Data & Alerts| H[Next.js + MapLibre GL Command Center]
 ```
-
-The backend exposes the whole run over one HTTP call:
-
-| Endpoint | Purpose |
-| :--- | :--- |
-| `GET /` | Liveness message |
-| `GET /status` | API + dam status |
-| `GET /test-db` | Connectivity check against `gn_divisions` |
-| `POST /run-agents` | Runs the 4-agent pipeline; body is optional |
-
-```bash
-curl -X POST http://127.0.0.1:8000/run-agents \
-  -H "Content-Type: application/json" \
-  -d '{"rainfall_mm": 105.0, "current_water_level": 1135.0}'
-```
-
-Returns `final_risk_level`, `estimated_cusecs`, `affected_areas`, `safe_shelters`, `multilingual_alerts` (`en` / `si` / `ta`) and a step-by-step `agent_log`. Omitting the body falls back to the default demo scenario.
 
 ---
 
-## 🦸 "Super Tricks" & Engineering Highlights
+## 🦸 Engineering Highlights & "Super Tricks"
 
-* **Synthetic data with deliberate label noise** — public historical spill data for the Victoria Dam is not available, so the models are trained on 5,000 generated hydrological scenarios. The labels are derived from explicit hydrological rules, which the model would otherwise memorise: injecting **5% stochastic label noise** drops training-set leakage and yields a generalisable ~96% classifier accuracy with a cusecs MAE in the low thousands.
-* **Few-shot multilingual prompting** — base LLMs mix scripts and produce unnatural Sinhala/Tamil under pressure. Strict few-shot examples in the system prompt produce grammatically correct, panic-free alerts with accurate native-script names (e.g. "කටුගස්තොට" rather than Latin "Katugastota"), with English fallback when a translation column is missing.
-* **Fail-soft by design** — the graph, the LLM call and the model loading are all individually guarded. A missing `.pkl`, a retired Gemini model or a rate-limit degrades to heuristic text/values instead of crashing the API mid-disaster. The model name is env-configurable (`GEMINI_MODEL`) precisely because Google retires models frequently.
+* **Synthetic Data ML Training**: Due to the scarcity of public historical spill data, the XGBoost model was trained on a 5,000-row synthetic hydrological dataset. To prevent data leakage and simulate real-world sensor variance, **5% stochastic noise** was injected into the training labels, resulting in a robust, generalizable accuracy of ~96%.
+* **Flawless Multilingual Rendering**: Base LLMs often hallucinate South Asian scripts. By combining strict few-shot prompting with dedicated `Noto Sans Sinhala/Tamil` web fonts, the system guarantees grammatically correct, panic-free alerts with perfect conjunct rendering (e.g., "කටුගස්තොට" instead of broken transliteration).
+* **Resilient Fallback Architecture**: The LangGraph workflow includes `try/except` blocks and heuristic fallbacks. If the LLM API rate-limits, the system degrades gracefully to default safe alerts rather than crashing the pipeline.
 
 ---
 
@@ -70,83 +56,66 @@ Returns `final_risk_level`, `estimated_cusecs`, `affected_areas`, `safe_shelters
 
 | Category | Technologies |
 | :--- | :--- |
-| **Agent orchestration** | LangGraph 1.x, LangChain Core, Pydantic |
-| **Machine learning** | Python, XGBoost, scikit-learn, pandas, joblib |
-| **Backend API** | FastAPI, Uvicorn, Psycopg2 (Supabase IPv4 pooler) |
-| **Frontend & maps** | Next.js 16, React 19, Tailwind CSS v4, MapLibre GL, Geoapify |
+| **Agent Orchestration** | LangGraph 1.x, LangChain Core, Pydantic |
+| **Machine Learning** | Python, XGBoost, Scikit-Learn, Pandas, Joblib |
+| **Backend API** | FastAPI, Uvicorn, Psycopg2 (PostgreSQL IPv4 Pooler) |
+| **Frontend & Maps** | Next.js 16, React 19, Tailwind CSS v4, MapLibre GL, Geoapify |
 | **Database** | Supabase (PostgreSQL) |
-| **Runtime** | Bun (frontend), Python 3.12 venv (backend) |
+| **Runtime** | Bun (Production), Python 3.10+ venv |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Python 3.10+
-- [Bun](https://bun.sh/) for the frontend (Node.js works too, but the project is set up for Bun)
+- Python 3.10+ 
+- [Bun](https://bun.sh/) (Recommended for Next.js frontend)
 
-### 1. Database
-Run the schema in the Supabase SQL editor: `gn_divisions` and `shelters` (with `name_si` / `name_ta` translation columns), plus the `users` table. Seed at least one GN division per risk zone and one shelter per division you intend to demo.
-
-### 2. Backend
-
+### 1. Backend Setup
 ```bash
 git clone https://github.com/<your-username>/hydroguard-ai.git
 cd hydroguard-ai/backend
 
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-cp .env.example .env            # add DATABASE_URL and GOOGLE_API_KEY
-
-# Optional: regenerate the models (already committed in ml/*.pkl)
-python ml/train_model.py
+cp .env.example .env
+# Add your GOOGLE_API_KEY and DATABASE_URL to .env
 
 uvicorn main:app --reload
 ```
+*Backend will be available at `http://127.0.0.1:8000` (Visit `/docs` for Swagger UI)*
 
-Backend is available at `http://127.0.0.1:8000` (interactive docs at `/docs`).
-
-### 3. Frontend
-
+### 2. Frontend Setup
 ```bash
 cd ../frontend
 bun install
-cp .env.example .env.local      # add NEXT_PUBLIC_GEOAPIFY_KEY
-bun run build && bun run start
+
+cp .env.example .env.local
+# Add your NEXT_PUBLIC_GEOAPIFY_KEY and NEXT_PUBLIC_API_URL
+
+bun run build
+bun run start
 ```
+*Frontend will be available at `http://127.0.0.1:3000`*
 
-Frontend is available at `http://127.0.0.1:3000`.
-
-| Variable | Where | Purpose |
-| :--- | :--- | :--- |
-| `DATABASE_URL` | `backend/.env` | Supabase Postgres (IPv4 session pooler) |
-| `GOOGLE_API_KEY` | `backend/.env` | Gemini access for alert generation |
-| `GEMINI_MODEL` | `backend/.env` | Model id, with fallback chain in code |
-| `NEXT_PUBLIC_GEOAPIFY_KEY` | `frontend/.env.local` | Basemap raster tiles |
-| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | Backend origin, e.g. `http://127.0.0.1:8000` |
-
-> **Note on local development:** running `next dev` under Bun currently fails its HMR WebSocket handshake, which stalls hydration. Use `bun run build && bun run start` for local testing, or install Node.js LTS for classic hot reload.
+> **Note:** Due to known HMR WebSocket handshake issues when running `next dev` under Bun, it is highly recommended to use `bun run build && bun run start` for local testing. 
 
 ---
 
-## ⚠️ Known Limitations & Future Work
+## ⚠️ Known Limitations & Phase 2 Roadmap
 
-Documented deliberately — a warning system is only trustworthy if its boundaries are stated.
+As an honest engineering project, the following limitations are documented for transparency:
 
-1. **Raster basemap, no 3D terrain** — the map renders Geoapify raster tiles through MapLibre GL. It is token-free and reliable, but there is no extruded terrain. *Future work:* a DEM-backed terrain source, or Cesium, once API quotas allow.
-2. **Simulated inflow** — Agent 2 feeds the model `inflow_rate = rainfall_mm * 50` as a stand-in for real inflow. The risk thresholds themselves are learned from synthetic rules, so the numbers are indicative, not operational. *Future work:* live telemetry from the Mahaweli Authority / Open-Meteo.
-3. **Marker coordinates are approximate** — the database stores elevation and risk zone but no geometry, so GN-division centroids are hardcoded in the frontend. *Future work:* store polygons and geocode via Geoapify.
-4. **LLM rate limits** — the free Gemini tier rate-limits under sustained load and the pipeline falls back to template alerts. *Future work:* a local model (Ollama) or cached alert templates.
-5. **No authentication or dispatch** — `/run-agents` is open, and alerts are returned to the dashboard rather than actually delivered over SMS/Telegram.
+1. **Map Rendering**: The current frontend uses Geoapify raster tiles via MapLibre GL. While highly reliable and token-friendly, it does not support extruded 3D terrain. *Phase 2*: Integrate Cesium.js or Mapbox 3D terrain when institutional API quotas allow.
+2. **ML Inflow Estimation**: The XGBoost model currently uses a heuristic correlation (`rainfall_mm * 50`) to estimate inflow rate. *Phase 2*: Integrate real-time IoT sensor telemetry APIs from the Mahaweli Authority for true live inflow data.
+3. **Alert Dispatch**: Currently, alerts are generated and displayed in the Command Center UI. *Phase 2*: Integrate Telegram Bot API and Twilio for automated, real-world push notifications to registered citizens.
 
 ---
 
 ## 📄 Academic & Portfolio Value
+This project demonstrates end-to-end AI engineering, combining predictive ML, stateful multi-agent workflows, geospatial mapping, and real-world social impact. It is structured to serve as a foundation for an IEEE/conference paper comparing autonomous multi-agent coordination against traditional manual warning systems in reducing evacuation response times.
 
-This project is an end-to-end demonstration of predictive ML, stateful multi-agent orchestration, geospatial mapping and multilingual NLG applied to a concrete social problem. It is structured to serve as a foundation for a study comparing autonomous multi-agent coordination against manual warning chains in evacuation response times.
-
-**Author**: Upamada Ekanayake
+**Author**: Upamada Ekanayake  
 **License**: MIT

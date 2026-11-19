@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #060a15;
-  --foreground: #e2e8f0;
+  --background: #eef2f7;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans-var);
+  --font-mono: var(--font-mono-var);
+  --font-heading: var(--font-heading-var);
+  --font-si: var(--font-si-var);
+  --font-ta: var(--font-ta-var);
 }
 
 html,
@@ -19,13 +22,17 @@ body {
 }
 
 body {
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-sans-var), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Sinhala / Tamil need their own font stack, browser defaults render poorly */
+/*
+ * Sinhala / Tamil glyphs are missing from the Latin families, so native text
+ * gets its own stack. Both Noto faces are loaded as web fonts; the browser
+ * picks per-glyph, so one class covers Sinhala and Tamil.
+ */
 .font-native {
-  font-family: "Noto Sans Sinhala", "Iskoola Pota", "Nirmala UI",
-    "Noto Sans Tamil", "Latha", "Nirmala UI", ui-sans-serif, sans-serif;
+  font-family: var(--font-si-var), var(--font-ta-var), "Iskoola Pota",
+    "Latha", "Nirmala UI", ui-sans-serif, sans-serif;
   line-height: 1.8;
 }
 
@@ -115,12 +122,38 @@ body {
   filter: invert(1) hue-rotate(180deg);
 }
 
+/*
+ * The command center overlays a 360px intel stack (left) and a 350px twin
+ * drawer (right), so MapLibre's default corner controls would sit underneath
+ * them. Centre them in the free strip instead.
+ */
+.map-canvas .maplibregl-ctrl-bottom-left {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 3.25rem;
+}
+
+.map-canvas .maplibregl-ctrl-bottom-right {
+  right: 50%;
+  transform: translateX(50%);
+  bottom: 0.75rem;
+}
+
+.map-canvas .maplibregl-ctrl-attrib.maplibregl-compact {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 6px;
+}
+
+.map-canvas .maplibregl-ctrl-attrib.maplibregl-compact a {
+  color: #475569;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(100, 116, 139, 0.35);
   border-radius: 9999px;
 }

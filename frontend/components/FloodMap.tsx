@@ -8,6 +8,7 @@ import {
   Marker,
   NavigationControl,
   Popup,
+  setWorkerUrl,
   type StyleSpecification,
 } from "maplibre-gl";
 import { Layers } from "lucide-react";
@@ -17,6 +18,8 @@ interface FloodMapProps {
   affectedAreas: GNDivision[];
   safeShelters: Shelter[];
   riskLevel: string;
+  /** "canvas" fills its positioned parent instead of rendering a rounded panel. */
+  variant?: "panel" | "canvas";
 }
 
 /**
@@ -33,6 +36,13 @@ const GN_COORDINATES: Record<string, [number, number]> = {
 const FALLBACK_CENTER: [number, number] = [80.632, 7.308];
 
 const GEOAPIFY_STYLE_NAME = "osm-bright-smooth";
+
+/**
+ * Turbopack emits a chunk URL for MapLibre's bundled worker that the production
+ * server answers with HTML, so the worker never boots (tiles/GeoJSON parsing
+ * break). Point it at the copy shipped in /public instead.
+ */
+const MAPLIBRE_WORKER_URL = "/maplibre/maplibre-gl-worker.mjs";
 
 function geoapifyStyle(apiKey: string): StyleSpecification {
   return {
@@ -83,7 +93,9 @@ export default function FloodMap({
   affectedAreas,
   safeShelters,
   riskLevel,
+  variant = "panel",
 }: FloodMapProps) {
+  const isCanvas = variant === "canvas";
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
@@ -106,6 +118,7 @@ export default function FloodMap({
 
     let map: MapLibreMap;
     try {
+      setWorkerUrl(MAPLIBRE_WORKER_URL);
       map = new MapLibreMap({
         container,
         style: geoapifyStyle(apiKey),
@@ -266,8 +279,17 @@ export default function FloodMap({
   }, [affectedAreas, safeShelters, riskLevel, mapReady]);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950">
-      <div ref={containerRef} className="h-[520px] w-full" />
+    <div
+      className={
+        isCanvas
+          ? "map-canvas absolute inset-0 overflow-hidden bg-slate-200"
+          : "relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950"
+      }
+    >
+      <div
+        ref={containerRef}
+        className={isCanvas ? "h-full w-full" : "h-[520px] w-full"}
+      />
 
       {error && (
         <div className="absolute inset-0 grid place-items-center bg-slate-950/90 p-6 text-center">
@@ -275,19 +297,23 @@ export default function FloodMap({
         </div>
       )}
 
-      <div className="pointer-events-none absolute left-4 top-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300 backdrop-blur">
-        <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Flood risk zone
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-emerald-500" /> Safe shelter
-        </span>
-      </div>
+      {!isCanvas && (
+        <>
+          <div className="pointer-events-none absolute left-4 top-4 flex flex-col gap-2 rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300 backdrop-blur">
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Flood risk zone
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rotate-45 rounded-[2px] bg-emerald-500" /> Safe shelter
+            </span>
+          </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-1.5 text-[11px] text-slate-400 backdrop-blur">
-        <Layers className="h-3.5 w-3.5" />
-        Geoapify · OpenStreetMap
-      </div>
+          <div className="pointer-events-none absolute bottom-4 left-4 flex items-center gap-2 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-1.5 text-[11px] text-slate-400 backdrop-blur">
+            <Layers className="h-3.5 w-3.5" />
+            Geoapify · OpenStreetMap
+          </div>
+        </>
+      )}
     </div>
   );
 }
