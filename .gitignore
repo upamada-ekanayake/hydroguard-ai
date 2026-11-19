@@ -1,6 +1,8 @@
 # Secrets
 .env
 .env.*
+# ...except the documented template
+!**/.env.example
 
 # Python
 backend/venv/
